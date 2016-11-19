@@ -29,7 +29,12 @@
 *****************************************************************************/
 
 #define _PARTICLE_BUILD_IDE_
-#include "ParticleSoftSerial.h"
+
+#if defined(_PARTICLE_BUILD_IDE_)
+#  include "ParticleSoftSerial/ParticleSoftSerial.h"
+#else
+#  include "ParticleSoftSerial.h"
+#endif
 
 #define SENDER   Serial1
 #define RECEIVER SoftSer

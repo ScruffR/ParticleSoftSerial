@@ -22,9 +22,11 @@
 *****************************************************************************/
 
 #pragma once
+#define _PARTICLE_BUILD_IDE_
 
 #include "Particle.h"
-// needs to be imported seperately
+
+// SparkIntervalTimer library needs to be imported seperately
 #if defined(_PARTICLE_BUILD_IDE_)
 #  include "SparkIntervalTimer/SparkIntervalTimer.h"
 #else
