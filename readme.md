@@ -4,6 +4,13 @@
 
   This library provides a basic implementation of an interrupt timer
   driven software serial port on any two digital GPIOs as RX/TX.
+
+  Notes:
+  Import SparkIntervalTimer library (by Paul Kourany)
+    Due to limited free timers and to avoid interrupt mashup, only
+    one active instance is allowed.
+  Soft RX pin needs to be interrupt enabled, so on Photon D0 & A5
+    won't work as RX
   
   This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public

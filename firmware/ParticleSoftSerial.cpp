@@ -5,6 +5,13 @@
 *
 *  This library provides a basic implementation of an interrupt timer
 *  driven software serial port on any two digital GPIOs as RX/TX.
+*
+*  Notes:
+*  Import SparkIntervalTimer library (by Paul Kourany)
+*    Due to limited free timers and to avoid interrupt mashup, only
+*    one active instance is allowed.
+*  Soft RX pin needs to be interrupt enabled, so on Photon D0 & A5
+*    won't work as RX
 *  
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -59,6 +66,7 @@ static const BAUD_TIMING btTable[] =
 
 int      ParticleSoftSerial::_rxPin                = PSS_INACTIVE;
 int      ParticleSoftSerial::_txPin                = PSS_INACTIVE;
+boolean  ParticleSoftSerial::_halfduplex           =        false;
 uint32_t ParticleSoftSerial::_usStartBit           =          140; // start bit with odd lengths due to EXTI latency
 uint32_t ParticleSoftSerial::_usBitLength          =          104; // default 9600 baud = 104µs per bit
 uint8_t  ParticleSoftSerial::_parity               =         0x00; // default NONE
@@ -84,18 +92,18 @@ ParticleSoftSerial::ParticleSoftSerial(int rxPin, int txPin)
 {
   if (pss) 
   {
+#if (SYSTEM_VERSION >= 0x00060000)
     Log.error("There is already an instance of ParticleSoftSerial running on pins RX%d / TX%d", _rxPin, _txPin);
+#endif
     return;
   }
   pss = this;
-  pinMode(txPin, OUTPUT);
-  pinSetFast(txPin);
+
+  _halfduplex = (rxPin == txPin);
+  _rxPin = rxPin;
   _txPin = txPin;
 
-  pinMode(rxPin, INPUT_PULLUP);
-  _rxPin = rxPin;
-  
-  _rxBufferTail = _rxBufferHead = 
+   _rxBufferTail = _rxBufferHead = 
   _txBufferTail = _txBufferHead = 0;
   
   _PSS_DEBUG_PIN(D0);
@@ -105,6 +113,28 @@ ParticleSoftSerial::~ParticleSoftSerial()
 {
   end();
   pss = NULL;
+}
+
+void ParticleSoftSerial::prepareRX(void)
+{
+  pinMode(_rxPin, INPUT_PULLUP);
+
+  _rxBitPos = PSS_INACTIVE;
+  rxTimer.begin(rxTimerISR, _usBitLength, uSec);
+  //rxTimer.interrupt_SIT(INT_DISABLE);
+
+  // prepare for FALLING edge of start bit 
+  attachInterrupt(_rxPin, rxPinISR, FALLING);
+}
+
+void ParticleSoftSerial::prepareTX(void)
+{
+  pinMode(_txPin, OUTPUT);
+  pinSetFast(_txPin);
+
+  _txBitPos = PSS_INACTIVE;
+  txTimer.begin(txTimerISR, _usBitLength, uSec);
+  //txTimer.interrupt_SIT(INT_DISABLE);
 }
 
 void ParticleSoftSerial::begin(unsigned long baud)
@@ -145,37 +175,32 @@ void ParticleSoftSerial::begin(unsigned long baud, uint32_t config)
   {
     _parity = 0;
   }
-
-  
-  _rxBitPos = PSS_INACTIVE;
-  _txBitPos = PSS_INACTIVE;
-
+    
   for (int i=0; btTable[i].baudrate > 0; i++)
   {
     if (btTable[i].baudrate <= baud)
     {
+#if (SYSTEM_VERSION >= 0x00060000)
       if (btTable[i].baudrate != baud)
       {
         Log.info("%lu not available! Selected rate %lu", baud, btTable[i].baudrate);
       }
+#endif
       _usStartBit  = btTable[i].usStartBit;
       _usBitLength = btTable[i].usBitLength;
 
-      rxTimer.begin(rxTimerISR, _usBitLength, uSec);
-      //rxTimer.interrupt_SIT(INT_DISABLE);
-
-      txTimer.begin(txTimerISR, _usBitLength, uSec);
-      //txTimer.interrupt_SIT(INT_DISABLE);
-      
       break;
     }
   }
-  
-  // resync on FALLING edge of start bit 
-  attachInterrupt(_rxPin, rxPinISR, FALLING);
+
+  if (!_halfduplex)
+  { // since in halfduplex mode the pin starts off as RX pin
+    prepareTX();
+  }
+  prepareRX();
 }
 
-void ParticleSoftSerial::end()
+void ParticleSoftSerial::end(void)
 {
   detachInterrupt(_rxPin);
   rxTimer.end();
@@ -206,6 +231,11 @@ size_t ParticleSoftSerial::write(uint8_t b)
 
   if (_txBitPos <= PSS_INACTIVE)                                   // if txTimer is not yet running, start it
   {
+    if (_halfduplex)
+    {
+      end();
+      prepareTX();
+    }
     txTimer.resetPeriod_SIT(_usStartBit, uSec);
     _txBitPos = PSS_STARTBIT;
   }
@@ -228,8 +258,7 @@ int ParticleSoftSerial::read(void)
   uint8_t d;
 
   // Empty buffer?
-  if (_rxBufferHead == _rxBufferTail)
-    return -1;
+  if (_rxBufferHead == _rxBufferTail) return -1;
 
   d = _rxBuffer[_rxBufferTail]; 
   _rxBufferTail = (_rxBufferTail + 1) % _PSS_BUFF_SIZE;
@@ -237,17 +266,27 @@ int ParticleSoftSerial::read(void)
   return d;
 }
 
-int ParticleSoftSerial::peek()
+int ParticleSoftSerial::peek(void)
 {
-  if (_rxBufferHead == _rxBufferTail)
-    return -1;
+  if (_rxBufferHead == _rxBufferTail) return -1;
 
   return _rxBuffer[_rxBufferTail];
 }
 
-void ParticleSoftSerial::flush()
+void ParticleSoftSerial::flush(void)
 {
   _rxBufferTail = _rxBufferHead;
+}
+
+void ParticleSoftSerial::sendBreak(int bits)
+{
+  if (_halfduplex)
+  {
+    end();
+    prepareTX();
+  }
+  pinResetFast(_txPin);
+  delayMicroseconds(_usBitLength * bits);
 }
 
 #ifdef _PSS_DEBUG
@@ -255,7 +294,7 @@ volatile uint32_t usLast[12];
 volatile uint8_t  b[12];
 #endif
 
-void ParticleSoftSerial::rxPinISR()
+void ParticleSoftSerial::rxPinISR(void)
 { // start bit triggers read after 1.5 bits lengths (= middle of first data bit)
   if (_rxBitPos <= PSS_STARTBIT)
   {
@@ -270,7 +309,7 @@ void ParticleSoftSerial::rxPinISR()
   }
 }
 
-void ParticleSoftSerial::rxTimerISR()
+void ParticleSoftSerial::rxTimerISR(void)
 {
   static uint8_t parityErr = (_parity & 0x01);
   uint8_t bit;
@@ -318,7 +357,7 @@ void ParticleSoftSerial::rxTimerISR()
   _PSS_DEBUG_LOW(D0);
 }
 
-void ParticleSoftSerial::txTimerISR()
+void ParticleSoftSerial::txTimerISR(void)
 {
   static uint8_t parity = (_parity & 0x01);
 
@@ -367,6 +406,7 @@ void ParticleSoftSerial::txTimerISR()
   {
     _txBitPos = PSS_INACTIVE;
     //rxTimer.interrupt_SIT(INT_DISABLE);
+    if (_halfduplex && pss) pss->prepareRX();                   // when TX in finished revert back to default RX mode
   }
   else
   {

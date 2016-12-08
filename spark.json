@@ -1,7 +1,7 @@
 {
 	"name": "ParticleSoftSerial",
 	"author": "ScruffR",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"license": "GNU Lesser General Public License",
 	"description": "Basic SoftSerial implementation (requires SparkIntervalTimer library to work)"
 }

@@ -5,6 +5,13 @@
 *
 *  This library provides a basic implementation of an interrupt timer
 *  driven software serial port on any two digital GPIOs as RX/TX.
+*
+*  Notes:
+*  Import SparkIntervalTimer library (by Paul Kourany)
+*    Due to limited free timers and to avoid interrupt mashup, only
+*    one active instance is allowed.
+*  Soft RX pin needs to be interrupt enabled, so on Photon D0 & A5
+*    won't work as RX
 *  
 *  This library is free software; you can redistribute it and/or
 *  modify it under the terms of the GNU Lesser General Public
@@ -22,7 +29,7 @@
 *****************************************************************************/
 
 #pragma once
-#define _PARTICLE_BUILD_IDE_
+#define _PARTICLE_BUILD_IDE_					// comment for use with CLI or Particle Dev
 
 #include "Particle.h"
 
@@ -53,6 +60,7 @@ private:
 
   static int      _rxPin;
   static int      _txPin;
+  static boolean  _halfduplex;
   static uint32_t _usStartBit;
   static uint32_t _usBitLength;
   static uint8_t  _parity;
@@ -72,6 +80,9 @@ private:
   static IntervalTimer rxTimer;
   static IntervalTimer txTimer;
 
+  void   prepareRX(void);
+  void   prepareTX(void);
+
 public:
   // public methods
   ParticleSoftSerial(int rxPin, int txPin);
@@ -79,18 +90,19 @@ public:
   void begin(unsigned long baud);
   void begin(unsigned long baud, uint32_t config);
 
-  void end();
+  void end(void);
   size_t  availableForWrite(void);
   size_t  available(void);
   virtual size_t write(uint8_t b); 
   virtual size_t write(const uint8_t *buffer, size_t size);
-  int  read();
-  int  peek();
-  void flush();
+  int  read(void);
+  int  peek(void);
+  void flush(void);
+  void sendBreak(int bits);
 
   // public only for easy access by interrupt handlers
   
-  static inline void rxPinISR();   // to reallign the interval timer
-  static inline void rxTimerISR(); // called by rxTimer
-  static inline void txTimerISR(); // called by txTimer
+  static inline void rxPinISR(void);   // to reallign the interval timer
+  static inline void rxTimerISR(void); // called by rxTimer
+  static inline void txTimerISR(void); // called by txTimer
 };

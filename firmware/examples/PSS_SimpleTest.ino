@@ -6,7 +6,7 @@
 *  This sample shows sends data from Serial1 to ParticleSoftSerial(D2/D3)
 *  
 *    Prerequisites:
-*      import SparkIntervalTimer library
+*      import SparkIntervalTimer library (by Paul Kourany)
 *      wire   Serial1 TX to D2
 *             Serial1 RX to D3 (for sending ParticleSoftSerial to Serial1)
 *  
@@ -28,22 +28,26 @@
 *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 *****************************************************************************/
 
-#define _PARTICLE_BUILD_IDE_
-
+#define _PARTICLE_BUILD_IDE_					// comment for use with CLI or Particle Dev
 #if defined(_PARTICLE_BUILD_IDE_)
 #  include "ParticleSoftSerial/ParticleSoftSerial.h"
 #else
 #  include "ParticleSoftSerial.h"
 #endif
 
-#define SENDER   Serial1
+#define SENDER   SoftSer
 #define RECEIVER SoftSer
 #define PROTOCOL SERIAL_8N1
 
 const uint32_t baud = 19200;
 
-SerialLogHandler logHandler;
-ParticleSoftSerial SoftSer(D2,D3);
+#if (SYSTEM_VERSION >= 0x00060000)
+  SerialLogHandler logHandler;
+#endif
+
+#define PSS_RX D2 // RX must be interrupt enabled (on Photon/Electron D0/A5 are not)
+#define PSS_TX D3
+ParticleSoftSerial SoftSer(PSS_RX, PSS_TX); 
 
 void setup()
 {
