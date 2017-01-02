@@ -208,12 +208,12 @@ void ParticleSoftSerial::end(void)
   flush();
 }
 
-size_t ParticleSoftSerial::availableForWrite(void)
+int ParticleSoftSerial::availableForWrite(void)
 {
   return (_txBufferHead - _txBufferTail + _PSS_BUFF_SIZE - 1) % _PSS_BUFF_SIZE; 
 }
 
-size_t ParticleSoftSerial::available(void)
+int ParticleSoftSerial::available(void)
 {
   return (_rxBufferHead - _rxBufferTail + _PSS_BUFF_SIZE) % _PSS_BUFF_SIZE; 
 }
@@ -241,6 +241,12 @@ size_t ParticleSoftSerial::write(uint8_t b)
   }
     
   return 1;
+}
+
+size_t ParticleSoftSerial::write(uint16_t b9)
+{
+  // 9 bit not yet implemented
+  return write((uint8_t)b9);
 }
 
 // use version pulled from Print

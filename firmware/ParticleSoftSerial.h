@@ -90,9 +90,10 @@ public:
   void begin(unsigned long baud, uint32_t config);
 
   void end(void);
-  virtual size_t availableForWrite(void);
-  virtual size_t available(void);
-  virtual size_t write(uint8_t b); 
+  virtual int    availableForWrite(void);
+  virtual int    available(void);
+  virtual size_t write(uint8_t b);
+  size_t         write(uint16_t b9); // nine-bit
   //virtual size_t write(const uint8_t *buffer, size_t size);
   virtual int    read(void);
   virtual int    peek(void);
