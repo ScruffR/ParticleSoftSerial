@@ -53,7 +53,7 @@
 
 #define _PSS_BUFF_SIZE 64 // buffer size
 
-class ParticleSoftSerial : public Print
+class ParticleSoftSerial : public Stream
 {
 private:
   static ParticleSoftSerial* pss; // only one instance allowed!
@@ -82,7 +82,6 @@ private:
 
   void   prepareRX(void);
   void   prepareTX(void);
-
 public:
   // public methods
   ParticleSoftSerial(int rxPin, int txPin);
@@ -100,9 +99,27 @@ public:
   void flush(void);
   void sendBreak(int bits);
 
+  inline size_t write(unsigned long n) { return write((uint16_t)n); }
+  inline size_t write(long n) { return write((uint16_t)n); }
+  inline size_t write(unsigned int n) { return write((uint16_t)n); }
+  inline size_t write(int n) { return write((uint16_t)n); }
+
+  using Print::write; // pull in write(str) and write(buf, size) from Print
+
   // public only for easy access by interrupt handlers
   
   static inline void rxPinISR(void);   // to reallign the interval timer
   static inline void rxTimerISR(void); // called by rxTimer
   static inline void txTimerISR(void); // called by txTimer
 };
+
+
+#if defined(SoftwareSerial)
+#undef SoftwareSerial
+#define SoftwareSerial ParticleSoftSerial
+#endif
+
+#if defined(NewSoftSerial)
+#undef NewSoftSerial
+#define NewSoftSerial ParticleSoftSerial
+#endif
