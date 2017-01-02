@@ -117,10 +117,10 @@ public:
 
 #if defined(SoftwareSerial)
 #undef SoftwareSerial
-#define SoftwareSerial ParticleSoftSerial
 #endif
+#define SoftwareSerial ParticleSoftSerial
 
 #if defined(NewSoftSerial)
 #undef NewSoftSerial
-#define NewSoftSerial ParticleSoftSerial
 #endif
+#define NewSoftSerial ParticleSoftSerial
