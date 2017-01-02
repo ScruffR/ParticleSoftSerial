@@ -243,15 +243,16 @@ size_t ParticleSoftSerial::write(uint8_t b)
   return 1;
 }
 
-size_t ParticleSoftSerial::write(const uint8_t *buffer, size_t size)
-{
-  size_t bytesSent;
-
-  // probably a better way with memcpy() - but more complicated ;-)
-  for(bytesSent = 0; bytesSent < size && write(buffer[bytesSent]); bytesSent++);
-
-  return bytesSent;
-}
+// use version pulled from Print
+//size_t ParticleSoftSerial::write(const uint8_t *buffer, size_t size)
+//{
+//  size_t bytesSent;
+//
+//  // probably a better way with memcpy() - but more complicated ;-)
+//  for(bytesSent = 0; bytesSent < size && write(buffer[bytesSent]); bytesSent++);
+//
+//  return bytesSent;
+//}
 
 int ParticleSoftSerial::read(void)
 {

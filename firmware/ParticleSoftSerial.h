@@ -90,13 +90,13 @@ public:
   void begin(unsigned long baud, uint32_t config);
 
   void end(void);
-  size_t  availableForWrite(void);
-  size_t  available(void);
+  virtual size_t availableForWrite(void);
+  virtual size_t available(void);
   virtual size_t write(uint8_t b); 
-  virtual size_t write(const uint8_t *buffer, size_t size);
-  int  read(void);
-  int  peek(void);
-  void flush(void);
+  //virtual size_t write(const uint8_t *buffer, size_t size);
+  virtual int    read(void);
+  virtual int    peek(void);
+  virtual void   flush(void);
   void sendBreak(int bits);
 
   inline size_t write(unsigned long n) { return write((uint16_t)n); }
