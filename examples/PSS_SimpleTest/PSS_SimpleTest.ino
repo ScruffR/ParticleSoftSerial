@@ -1,7 +1,7 @@
-/*****************************************************************************
+ï»¿/*****************************************************************************
 *  ParticleSoftSerial library (PSS_SimpleTest.ino)
 *  Copyright (c) 2016 Free Software Foundation.  All right reserved.
-*  Written by Andreas Rothenwänder (aka ScruffR)
+*  Written by Andreas Rothenwï¿½nder (aka ScruffR)
 *
 *  This sample shows sends data from Serial1 to ParticleSoftSerial(D2/D3)
 *  
@@ -27,15 +27,9 @@
 *  License along with this library; if not, write to the Free Software
 *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 *****************************************************************************/
+#include <ParticleSoftSerial.h>
 
-#define _PARTICLE_BUILD_IDE_					// comment for use with CLI or Particle Dev
-#if defined(_PARTICLE_BUILD_IDE_)
-#  include "ParticleSoftSerial/ParticleSoftSerial.h"
-#else
-#  include "ParticleSoftSerial.h"
-#endif
-
-#define SENDER   SoftSer
+#define SENDER   Serial1
 #define RECEIVER SoftSer
 #define PROTOCOL SERIAL_8N1
 
@@ -64,7 +58,7 @@ void loop()
   int len;
   
   memset(szRX, 0, sizeof(szRX));
-  strcpy(szTX, "0123456789abcdefghijklmnopqrtstuvwxyzäöüß\xFF"); // add some exotic chars too
+  strcpy(szTX, "0123456789abcdefghijklmnopqrtstuvwxyzï¿½ï¿½ï¿½ï¿½\xFF"); // add some exotic chars too
   
   len = strlen(szTX) + 1;
   SENDER.write((uint8_t*)szTX, len);   

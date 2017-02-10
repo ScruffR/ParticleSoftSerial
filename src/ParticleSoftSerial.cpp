@@ -1,7 +1,7 @@
-/*****************************************************************************
+Ôªø/*****************************************************************************
 *  ParticleSoftSerial library (ParticleSoftSewrial.cpp)
 *  Copyright (c) 2016 Free Software Foundation.  All right reserved.
-*  Written by Andreas Rothenw‰nder (aka ScruffR)
+*  Written by Andreas Rothenw√§nder (aka ScruffR)
 *
 *  This library provides a basic implementation of an interrupt timer
 *  driven software serial port on any two digital GPIOs as RX/TX.
@@ -28,7 +28,7 @@
 *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 *****************************************************************************/
 
-#include "ParticleSoftSerial.h"
+#include <ParticleSoftSerial.h>
 
 enum {
     PSS_INACTIVE = -2,
@@ -45,30 +45,29 @@ typedef struct
 
 static const BAUD_TIMING btTable[] =
 {
-//    baud  µs/start  µs/bit 1/baudrate 
+//    baud  ÔøΩs/start  ÔøΩs/bit 1/baudrate 
 //                    shorter due to call latency
-//  { 115200,     3,     9 }, // exact    8.68056µs
-  {  57600,     9,    16 }, //         17.36111µs
-  {  38400,    24,    24 }, //         26.04167µs
-  {  31250,    31,    31 }, //         32.00000µs
-  {  28800,    37,    33 }, //         34.72222µs
-  {  19200,    61,    51 }, //         52.08333µs
-  {  14400,    90,    68 }, //         69.44444µs
-  {   9600,   140,   104 }, //        104.16667µs
-  {   4800,   295,   208 }, //        208.33333µs
-  {   2400,   610,   417 }, //        416.66667µs
-  {   1200,  1230,   833 }, //        833.33333µs
-  {    600,  2500,  1667 }, //       1666.66667µs
-  {    300,  5000,  3333 }, //       3333.33333µs
+//  { 115200,     3,     9 }, // exact    8.68056ÔøΩs
+  {  57600,     9,    16 }, //         17.36111ÔøΩs
+  {  38400,    24,    24 }, //         26.04167ÔøΩs
+  {  31250,    31,    31 }, //         32.00000ÔøΩs
+  {  28800,    37,    33 }, //         34.72222ÔøΩs
+  {  19200,    61,    51 }, //         52.08333ÔøΩs
+  {  14400,    90,    68 }, //         69.44444ÔøΩs
+  {   9600,   140,   104 }, //        104.16667ÔøΩs
+  {   4800,   295,   208 }, //        208.33333ÔøΩs
+  {   2400,   610,   417 }, //        416.66667ÔøΩs
+  {   1200,  1230,   833 }, //        833.33333ÔøΩs
+  {    600,  2500,  1667 }, //       1666.66667ÔøΩs
+  {    300,  5000,  3333 }, //       3333.33333ÔøΩs
   {      0,     0,     0 }  // end mark
 };
 
 
 int      ParticleSoftSerial::_rxPin                = PSS_INACTIVE;
 int      ParticleSoftSerial::_txPin                = PSS_INACTIVE;
-boolean  ParticleSoftSerial::_halfduplex           =        false;
 uint32_t ParticleSoftSerial::_usStartBit           =          140; // start bit with odd lengths due to EXTI latency
-uint32_t ParticleSoftSerial::_usBitLength          =          104; // default 9600 baud = 104µs per bit
+uint32_t ParticleSoftSerial::_usBitLength          =          104; // default 9600 baud = 104ÔøΩs per bit
 uint8_t  ParticleSoftSerial::_parity               =         0x00; // default NONE
 uint8_t  ParticleSoftSerial::_dataBits             =            8; // default 8bit
 uint8_t  ParticleSoftSerial::_totalBits            =            9; // ignore start bit, 8data + 1stop
@@ -98,12 +97,14 @@ ParticleSoftSerial::ParticleSoftSerial(int rxPin, int txPin)
     return;
   }
   pss = this;
-
-  _halfduplex = (rxPin == txPin);
-  _rxPin = rxPin;
+  pinMode(txPin, OUTPUT);
+  pinSetFast(txPin);
   _txPin = txPin;
 
-   _rxBufferTail = _rxBufferHead = 
+  pinMode(rxPin, INPUT_PULLUP);
+  _rxPin = rxPin;
+  
+  _rxBufferTail = _rxBufferHead = 
   _txBufferTail = _txBufferHead = 0;
   
   _PSS_DEBUG_PIN(D0);
@@ -113,28 +114,6 @@ ParticleSoftSerial::~ParticleSoftSerial()
 {
   end();
   pss = NULL;
-}
-
-void ParticleSoftSerial::prepareRX(void)
-{
-  pinMode(_rxPin, INPUT_PULLUP);
-
-  _rxBitPos = PSS_INACTIVE;
-  rxTimer.begin(rxTimerISR, _usBitLength, uSec);
-  //rxTimer.interrupt_SIT(INT_DISABLE);
-
-  // prepare for FALLING edge of start bit 
-  attachInterrupt(_rxPin, rxPinISR, FALLING);
-}
-
-void ParticleSoftSerial::prepareTX(void)
-{
-  pinMode(_txPin, OUTPUT);
-  pinSetFast(_txPin);
-
-  _txBitPos = PSS_INACTIVE;
-  txTimer.begin(txTimerISR, _usBitLength, uSec);
-  //txTimer.interrupt_SIT(INT_DISABLE);
 }
 
 void ParticleSoftSerial::begin(unsigned long baud)
@@ -175,7 +154,11 @@ void ParticleSoftSerial::begin(unsigned long baud, uint32_t config)
   {
     _parity = 0;
   }
-    
+
+  
+  _rxBitPos = PSS_INACTIVE;
+  _txBitPos = PSS_INACTIVE;
+
   for (int i=0; btTable[i].baudrate > 0; i++)
   {
     if (btTable[i].baudrate <= baud)
@@ -189,18 +172,21 @@ void ParticleSoftSerial::begin(unsigned long baud, uint32_t config)
       _usStartBit  = btTable[i].usStartBit;
       _usBitLength = btTable[i].usBitLength;
 
+      rxTimer.begin(rxTimerISR, _usBitLength, uSec);
+      //rxTimer.interrupt_SIT(INT_DISABLE);
+
+      txTimer.begin(txTimerISR, _usBitLength, uSec);
+      //txTimer.interrupt_SIT(INT_DISABLE);
+      
       break;
     }
   }
-
-  if (!_halfduplex)
-  { // since in halfduplex mode the pin starts off as RX pin
-    prepareTX();
-  }
-  prepareRX();
+  
+  // resync on FALLING edge of start bit 
+  attachInterrupt(_rxPin, rxPinISR, FALLING);
 }
 
-void ParticleSoftSerial::end(void)
+void ParticleSoftSerial::end()
 {
   detachInterrupt(_rxPin);
   rxTimer.end();
@@ -208,12 +194,12 @@ void ParticleSoftSerial::end(void)
   flush();
 }
 
-int ParticleSoftSerial::availableForWrite(void)
+size_t ParticleSoftSerial::availableForWrite(void)
 {
   return (_txBufferHead - _txBufferTail + _PSS_BUFF_SIZE - 1) % _PSS_BUFF_SIZE; 
 }
 
-int ParticleSoftSerial::available(void)
+size_t ParticleSoftSerial::available(void)
 {
   return (_rxBufferHead - _rxBufferTail + _PSS_BUFF_SIZE) % _PSS_BUFF_SIZE; 
 }
@@ -231,11 +217,6 @@ size_t ParticleSoftSerial::write(uint8_t b)
 
   if (_txBitPos <= PSS_INACTIVE)                                   // if txTimer is not yet running, start it
   {
-    if (_halfduplex)
-    {
-      end();
-      prepareTX();
-    }
     txTimer.resetPeriod_SIT(_usStartBit, uSec);
     _txBitPos = PSS_STARTBIT;
   }
@@ -243,29 +224,23 @@ size_t ParticleSoftSerial::write(uint8_t b)
   return 1;
 }
 
-size_t ParticleSoftSerial::write(uint16_t b9)
+size_t ParticleSoftSerial::write(const uint8_t *buffer, size_t size)
 {
-  // 9 bit not yet implemented
-  return write((uint8_t)b9);
-}
+  size_t bytesSent;
 
-// use version pulled from Print
-//size_t ParticleSoftSerial::write(const uint8_t *buffer, size_t size)
-//{
-//  size_t bytesSent;
-//
-//  // probably a better way with memcpy() - but more complicated ;-)
-//  for(bytesSent = 0; bytesSent < size && write(buffer[bytesSent]); bytesSent++);
-//
-//  return bytesSent;
-//}
+  // probably a better way with memcpy() - but more complicated ;-)
+  for(bytesSent = 0; bytesSent < size && write(buffer[bytesSent]); bytesSent++);
+
+  return bytesSent;
+}
 
 int ParticleSoftSerial::read(void)
 {
   uint8_t d;
 
   // Empty buffer?
-  if (_rxBufferHead == _rxBufferTail) return -1;
+  if (_rxBufferHead == _rxBufferTail)
+    return -1;
 
   d = _rxBuffer[_rxBufferTail]; 
   _rxBufferTail = (_rxBufferTail + 1) % _PSS_BUFF_SIZE;
@@ -273,27 +248,17 @@ int ParticleSoftSerial::read(void)
   return d;
 }
 
-int ParticleSoftSerial::peek(void)
+int ParticleSoftSerial::peek()
 {
-  if (_rxBufferHead == _rxBufferTail) return -1;
+  if (_rxBufferHead == _rxBufferTail)
+    return -1;
 
   return _rxBuffer[_rxBufferTail];
 }
 
-void ParticleSoftSerial::flush(void)
+void ParticleSoftSerial::flush()
 {
   _rxBufferTail = _rxBufferHead;
-}
-
-void ParticleSoftSerial::sendBreak(int bits)
-{
-  if (_halfduplex)
-  {
-    end();
-    prepareTX();
-  }
-  pinResetFast(_txPin);
-  delayMicroseconds(_usBitLength * bits);
 }
 
 #ifdef _PSS_DEBUG
@@ -301,7 +266,7 @@ volatile uint32_t usLast[12];
 volatile uint8_t  b[12];
 #endif
 
-void ParticleSoftSerial::rxPinISR(void)
+void ParticleSoftSerial::rxPinISR()
 { // start bit triggers read after 1.5 bits lengths (= middle of first data bit)
   if (_rxBitPos <= PSS_STARTBIT)
   {
@@ -316,7 +281,7 @@ void ParticleSoftSerial::rxPinISR(void)
   }
 }
 
-void ParticleSoftSerial::rxTimerISR(void)
+void ParticleSoftSerial::rxTimerISR()
 {
   static uint8_t parityErr = (_parity & 0x01);
   uint8_t bit;
@@ -364,7 +329,7 @@ void ParticleSoftSerial::rxTimerISR(void)
   _PSS_DEBUG_LOW(D0);
 }
 
-void ParticleSoftSerial::txTimerISR(void)
+void ParticleSoftSerial::txTimerISR()
 {
   static uint8_t parity = (_parity & 0x01);
 
@@ -413,7 +378,6 @@ void ParticleSoftSerial::txTimerISR(void)
   {
     _txBitPos = PSS_INACTIVE;
     //rxTimer.interrupt_SIT(INT_DISABLE);
-    if (_halfduplex && pss) pss->prepareRX();                   // when TX in finished revert back to default RX mode
   }
   else
   {
