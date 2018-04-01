@@ -29,8 +29,11 @@
 *****************************************************************************/
 
 #pragma once
-#include <Particle.h>
-#include <SparkIntervalTimer.h>
+#define _PARTICLE_BUILD_IDE_					// comment for use with CLI or Particle Dev
+
+#include "Particle.h"
+
+#include "SparkIntervalTimer.h"
 
 #define X_PSS_DEBUG
 #ifdef _PSS_DEBUG
@@ -45,13 +48,14 @@
 
 #define _PSS_BUFF_SIZE 64 // buffer size
 
-class ParticleSoftSerial : public Print
+class ParticleSoftSerial : public Stream
 {
 private:
   static ParticleSoftSerial* pss; // only one instance allowed!
 
   static int      _rxPin;
   static int      _txPin;
+  static boolean  _halfduplex;
   static uint32_t _usStartBit;
   static uint32_t _usBitLength;
   static uint8_t  _parity;
@@ -71,6 +75,8 @@ private:
   static IntervalTimer rxTimer;
   static IntervalTimer txTimer;
 
+  void   prepareRX(void);
+  void   prepareTX(void);
 public:
   // public methods
   ParticleSoftSerial(int rxPin, int txPin);
@@ -78,18 +84,38 @@ public:
   void begin(unsigned long baud);
   void begin(unsigned long baud, uint32_t config);
 
-  void end();
-  size_t  availableForWrite(void);
-  size_t  available(void);
-  virtual size_t write(uint8_t b); 
-  virtual size_t write(const uint8_t *buffer, size_t size);
-  int  read();
-  int  peek();
-  void flush();
+  void end(void);
+  virtual int    availableForWrite(void);
+  virtual int    available(void);
+  virtual size_t write(uint8_t b);
+  size_t         write(uint16_t b9); // nine-bit
+  //virtual size_t write(const uint8_t *buffer, size_t size);
+  virtual int    read(void);
+  virtual int    peek(void);
+  virtual void   flush(void);
+  void sendBreak(int bits = 14);
+
+  inline size_t write(unsigned long n) { return write((uint16_t)n); }
+  inline size_t write(long n) { return write((uint16_t)n); }
+  inline size_t write(unsigned int n) { return write((uint16_t)n); }
+  inline size_t write(int n) { return write((uint16_t)n); }
+
+  using Print::write; // pull in write(str) and write(buf, size) from Print
 
   // public only for easy access by interrupt handlers
   
-  static inline void rxPinISR();   // to reallign the interval timer
-  static inline void rxTimerISR(); // called by rxTimer
-  static inline void txTimerISR(); // called by txTimer
+  static inline void rxPinISR(void);   // to reallign the interval timer
+  static inline void rxTimerISR(void); // called by rxTimer
+  static inline void txTimerISR(void); // called by txTimer
 };
+
+
+#if defined(SoftwareSerial)
+#undef SoftwareSerial
+#endif
+#define SoftwareSerial ParticleSoftSerial
+
+#if defined(NewSoftSerial)
+#undef NewSoftSerial
+#endif
+#define NewSoftSerial ParticleSoftSerial
