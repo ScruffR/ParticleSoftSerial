@@ -61,7 +61,8 @@ private:
   static uint8_t  _parity;
   static uint8_t  _dataBits;
   static uint8_t  _totalBits;
-  
+  static int      _debugPin;
+
   static char _rxBuffer[_PSS_BUFF_SIZE]; 
   static volatile uint8_t _rxBufferHead;
   static volatile uint8_t _rxBufferTail;
@@ -79,7 +80,7 @@ private:
   void   prepareTX(void);
 public:
   // public methods
-  ParticleSoftSerial(int rxPin, int txPin);
+  ParticleSoftSerial(int rxPin, int txPin, int debugPin = -1);
   ~ParticleSoftSerial();
   void begin(unsigned long baud);
   void begin(unsigned long baud, uint32_t config);

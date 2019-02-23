@@ -88,15 +88,10 @@ IntervalTimer ParticleSoftSerial::txTimer;
 
 ParticleSoftSerial* ParticleSoftSerial::pss = NULL;
 
-ParticleSoftSerial::ParticleSoftSerial(int rxPin, int txPin)
+ParticleSoftSerial::ParticleSoftSerial(int rxPin, int txPin, int debugPin)
 {
   if (pss) 
-  {
-#if (SYSTEM_VERSION >= 0x00060000)
-    Log.error("There is already an instance of ParticleSoftSerial running on pins RX%d / TX%d", _rxPin, _txPin);
-#endif
-    return;
-  }
+    return; // only one instance allowed
   pss = this;
 
   _halfduplex = (rxPin == txPin);
@@ -105,8 +100,8 @@ ParticleSoftSerial::ParticleSoftSerial(int rxPin, int txPin)
 
    _rxBufferTail = _rxBufferHead = 
   _txBufferTail = _txBufferHead = 0;
-  
-  _PSS_DEBUG_PIN(D0);
+
+  _debugPin(debugPin);
 }
 
 ParticleSoftSerial::~ParticleSoftSerial() 
@@ -144,6 +139,15 @@ void ParticleSoftSerial::begin(unsigned long baud)
 
 void ParticleSoftSerial::begin(unsigned long baud, uint32_t config)
 {
+  if (pss) 
+  {
+#if (SYSTEM_VERSION >= 0x00060000)
+    Log.error("There is already an instance of ParticleSoftSerial running on pins RX%d / TX%d", _rxPin, _txPin);
+#endif
+    return;
+  }
+  _PSS_DEBUG_PIN(_debugPin);
+
   if (config & SERIAL_DATA_BITS_9)
   {
     _dataBits = 9;
@@ -322,7 +326,7 @@ void ParticleSoftSerial::rxTimerISR(void)
   uint8_t bit;
 
   if (_rxBitPos <= PSS_STARTBIT) return;
-  _PSS_DEBUG_HIGH(D0);
+  _PSS_DEBUG_HIGH(_debugPin);
   
   if (_rxBitPos == PSS_DATA) // after start bit go for normal bit length
   {
@@ -361,7 +365,7 @@ void ParticleSoftSerial::rxTimerISR(void)
     //rxTimer.interrupt_SIT(INT_DISABLE);
     attachInterrupt(_rxPin, rxPinISR, FALLING);
   }
-  _PSS_DEBUG_LOW(D0);
+  _PSS_DEBUG_LOW(_debugPin);
 }
 
 void ParticleSoftSerial::txTimerISR(void)
