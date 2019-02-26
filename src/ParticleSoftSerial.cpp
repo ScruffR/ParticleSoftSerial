@@ -64,6 +64,7 @@ static const BAUD_TIMING btTable[] =
 };
 
 
+int      ParticleSoftSerial::_debugPin             =           -1;
 int      ParticleSoftSerial::_rxPin                = PSS_INACTIVE;
 int      ParticleSoftSerial::_txPin                = PSS_INACTIVE;
 boolean  ParticleSoftSerial::_halfduplex           =        false;
@@ -78,7 +79,7 @@ volatile uint8_t ParticleSoftSerial::_rxBufferHead =            0;
 volatile uint8_t ParticleSoftSerial::_rxBufferTail =            0;
 volatile int8_t  ParticleSoftSerial::_rxBitPos     = PSS_INACTIVE;
   
-char ParticleSoftSerial::_txBuffer[_PSS_BUFF_SIZE] =            "";
+char ParticleSoftSerial::_txBuffer[_PSS_BUFF_SIZE] =           "";
 volatile uint8_t ParticleSoftSerial::_txBufferHead =            0; 
 volatile uint8_t ParticleSoftSerial::_txBufferTail =            0; 
 volatile int8_t  ParticleSoftSerial::_txBitPos     = PSS_INACTIVE; 
@@ -94,14 +95,14 @@ ParticleSoftSerial::ParticleSoftSerial(int rxPin, int txPin, int debugPin)
     return; // only one instance allowed
   pss = this;
 
+  _debugPin = debugPin;
+  
   _halfduplex = (rxPin == txPin);
   _rxPin = rxPin;
   _txPin = txPin;
 
-   _rxBufferTail = _rxBufferHead = 
+  _rxBufferTail = _rxBufferHead = 
   _txBufferTail = _txBufferHead = 0;
-
-  _debugPin(debugPin);
 }
 
 ParticleSoftSerial::~ParticleSoftSerial() 
@@ -146,7 +147,7 @@ void ParticleSoftSerial::begin(unsigned long baud, uint32_t config)
 #endif
     return;
   }
-  _PSS_DEBUG_PIN(_debugPin);
+//  _PSS_DEBUG_PIN(_debugPin);
 
   if (config & SERIAL_DATA_BITS_9)
   {

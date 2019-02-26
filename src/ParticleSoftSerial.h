@@ -53,6 +53,7 @@ class ParticleSoftSerial : public Stream
 private:
   static ParticleSoftSerial* pss; // only one instance allowed!
 
+  static int      _debugPin;
   static int      _rxPin;
   static int      _txPin;
   static boolean  _halfduplex;
@@ -61,7 +62,6 @@ private:
   static uint8_t  _parity;
   static uint8_t  _dataBits;
   static uint8_t  _totalBits;
-  static int      _debugPin;
 
   static char _rxBuffer[_PSS_BUFF_SIZE]; 
   static volatile uint8_t _rxBufferHead;
