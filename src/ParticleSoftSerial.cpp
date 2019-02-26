@@ -147,7 +147,7 @@ void ParticleSoftSerial::begin(unsigned long baud, uint32_t config)
 #endif
     return;
   }
-//  _PSS_DEBUG_PIN(_debugPin);
+  _PSS_DEBUG_PIN(_debugPin);
 
   if (config & SERIAL_DATA_BITS_9)
   {
