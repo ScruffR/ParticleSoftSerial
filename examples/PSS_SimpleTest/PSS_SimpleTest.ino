@@ -6,7 +6,6 @@
 *  This sample shows sends data from Serial1 to ParticleSoftSerial(D2/D3)
 *  
 *    Prerequisites:
-*      import SparkIntervalTimer library (by Paul Kourany)
 *      wire   Serial1 TX to D2
 *             Serial1 RX to D3 (for sending ParticleSoftSerial to Serial1)
 *  

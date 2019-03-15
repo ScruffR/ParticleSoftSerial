@@ -35,7 +35,7 @@
 
 #include "SparkIntervalTimer.h"
 
-#define X_PSS_DEBUG
+#define x_PSS_DEBUG
 #ifdef _PSS_DEBUG
 #  define _PSS_DEBUG_PIN(_pin)  pinMode(_pin, OUTPUT)
 #  define _PSS_DEBUG_HIGH(_pin) pinSetFast(_pin)
@@ -44,6 +44,7 @@
 #  define _PSS_DEBUG_PIN(_pin)  //pinMode(D0, OUTPUT)
 #  define _PSS_DEBUG_HIGH(_pin) //pinSetFast(D0)
 #  define _PSS_DEBUG_LOW(_pin)  //pinResetFast(D0)
+#  define _debugPin             (-1)
 #endif
 
 #define _PSS_BUFF_SIZE 64 // buffer size
@@ -53,7 +54,6 @@ class ParticleSoftSerial : public Stream
 private:
   static ParticleSoftSerial* pss; // only one instance allowed!
 
-  static int      _debugPin;
   static int      _rxPin;
   static int      _txPin;
   static boolean  _halfduplex;
@@ -62,7 +62,10 @@ private:
   static uint8_t  _parity;
   static uint8_t  _dataBits;
   static uint8_t  _totalBits;
-
+#ifdef _PSS_DEBUG
+  static int      _debugPin;
+#endif
+  
   static char _rxBuffer[_PSS_BUFF_SIZE]; 
   static volatile uint8_t _rxBufferHead;
   static volatile uint8_t _rxBufferTail;
@@ -80,7 +83,11 @@ private:
   void   prepareTX(void);
 public:
   // public methods
-  ParticleSoftSerial(int rxPin, int txPin, int debugPin = -1);
+  ParticleSoftSerial(int rxPin, int txPin
+#ifdef _PSS_DEBUG
+  , int debugPin // for _PSS_DEBUG a valid debug pin has to be provided
+#endif
+  );
   ~ParticleSoftSerial();
   void begin(unsigned long baud);
   void begin(unsigned long baud, uint32_t config);

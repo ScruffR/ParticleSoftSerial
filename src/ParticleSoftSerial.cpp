@@ -63,8 +63,9 @@ static const BAUD_TIMING btTable[] =
   {      0,     0,     0 }  // end mark
 };
 
-
-int      ParticleSoftSerial::_debugPin             =           -1;
+#ifdef _PSS_DEBUG
+  int    ParticleSoftSerial::_debugPin             =           D0;
+#endif
 int      ParticleSoftSerial::_rxPin                = PSS_INACTIVE;
 int      ParticleSoftSerial::_txPin                = PSS_INACTIVE;
 boolean  ParticleSoftSerial::_halfduplex           =        false;
@@ -79,7 +80,7 @@ volatile uint8_t ParticleSoftSerial::_rxBufferHead =            0;
 volatile uint8_t ParticleSoftSerial::_rxBufferTail =            0;
 volatile int8_t  ParticleSoftSerial::_rxBitPos     = PSS_INACTIVE;
   
-char ParticleSoftSerial::_txBuffer[_PSS_BUFF_SIZE] =           "";
+char ParticleSoftSerial::_txBuffer[_PSS_BUFF_SIZE] =            "";
 volatile uint8_t ParticleSoftSerial::_txBufferHead =            0; 
 volatile uint8_t ParticleSoftSerial::_txBufferTail =            0; 
 volatile int8_t  ParticleSoftSerial::_txBitPos     = PSS_INACTIVE; 
@@ -89,17 +90,27 @@ IntervalTimer ParticleSoftSerial::txTimer;
 
 ParticleSoftSerial* ParticleSoftSerial::pss = NULL;
 
-ParticleSoftSerial::ParticleSoftSerial(int rxPin, int txPin, int debugPin)
+ParticleSoftSerial::ParticleSoftSerial(int rxPin, int txPin
+#ifdef _PSS_DEBUG
+  , int debugPin
+#endif
+)
 {
   if (pss) 
-    return; // only one instance allowed
+  {
+#if (SYSTEM_VERSION >= 0x00060000)
+    Log.error("There is already an instance of ParticleSoftSerial running on pins RX%d / TX%d", _rxPin, _txPin);
+#endif
+    return;
+  }
   pss = this;
 
-  _debugPin = debugPin;
-  
   _halfduplex = (rxPin == txPin);
   _rxPin = rxPin;
   _txPin = txPin;
+#ifdef _PSS_DEBUG 
+  _debugPin = debugPin;
+#endif
 
   _rxBufferTail = _rxBufferHead = 
   _txBufferTail = _txBufferHead = 0;
@@ -140,13 +151,6 @@ void ParticleSoftSerial::begin(unsigned long baud)
 
 void ParticleSoftSerial::begin(unsigned long baud, uint32_t config)
 {
-  if (pss) 
-  {
-#if (SYSTEM_VERSION >= 0x00060000)
-    Log.error("There is already an instance of ParticleSoftSerial running on pins RX%d / TX%d", _rxPin, _txPin);
-#endif
-    return;
-  }
   _PSS_DEBUG_PIN(_debugPin);
 
   if (config & SERIAL_DATA_BITS_9)
@@ -210,6 +214,11 @@ void ParticleSoftSerial::end(void)
   detachInterrupt(_rxPin);
   rxTimer.end();
   txTimer.end();
+  pinMode(_rxPin, INPUT);
+  pinMode(_txPin, INPUT);
+#ifdef _PSS_DEBUG
+  pinMode(_debugPin, INPUT);
+#endif
   flush();
 }
 
@@ -302,8 +311,8 @@ void ParticleSoftSerial::sendBreak(int bits)
 }
 
 #ifdef _PSS_DEBUG
-volatile uint32_t usLast[12];
-volatile uint8_t  b[12];
+  volatile uint32_t usLast[12];
+  volatile uint8_t  b[12];
 #endif
 
 void ParticleSoftSerial::rxPinISR(void)
