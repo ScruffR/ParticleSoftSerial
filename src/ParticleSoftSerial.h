@@ -77,7 +77,10 @@ private:
   static volatile int8_t  _txBitPos;
 
   static IntervalTimer rxTimer;
+  static TIMid         _rxTimId;         // HW timer ID used for SparkIntervalTimer
+
   static IntervalTimer txTimer;
+  static TIMid         _txTimId;         // HW timer ID used for SparkIntervalTimer
 
   void   prepareRX(void);
   void   prepareTX(void);
@@ -87,6 +90,8 @@ public:
 #ifdef _PSS_DEBUG
   , int debugPin // for _PSS_DEBUG a valid debug pin has to be provided
 #endif
+  , TIMid txTimId = AUTO                 // AUTO may cause SOS panic with RGB.mirror() - if so try alternative timers
+  , TIMid rxTimId = TIMER7               // default to usually unused TIMER7 (RX timer is more critical than TX)
   );
   ~ParticleSoftSerial();
   void begin(unsigned long baud);

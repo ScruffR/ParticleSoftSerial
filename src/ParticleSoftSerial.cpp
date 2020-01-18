@@ -80,7 +80,7 @@ volatile uint8_t ParticleSoftSerial::_rxBufferHead =            0;
 volatile uint8_t ParticleSoftSerial::_rxBufferTail =            0;
 volatile int8_t  ParticleSoftSerial::_rxBitPos     = PSS_INACTIVE;
   
-char ParticleSoftSerial::_txBuffer[_PSS_BUFF_SIZE] =            "";
+char ParticleSoftSerial::_txBuffer[_PSS_BUFF_SIZE] =           "";
 volatile uint8_t ParticleSoftSerial::_txBufferHead =            0; 
 volatile uint8_t ParticleSoftSerial::_txBufferTail =            0; 
 volatile int8_t  ParticleSoftSerial::_txBitPos     = PSS_INACTIVE; 
@@ -94,6 +94,8 @@ ParticleSoftSerial::ParticleSoftSerial(int rxPin, int txPin
 #ifdef _PSS_DEBUG
   , int debugPin
 #endif
+  , TIMid txTimId
+  , TIMid rxTimId
 )
 {
   if (pss) 
@@ -111,7 +113,9 @@ ParticleSoftSerial::ParticleSoftSerial(int rxPin, int txPin
 #ifdef _PSS_DEBUG 
   _debugPin = debugPin;
 #endif
-
+  _txTimId = txTimId;
+  _rxTimId = rxTimId;
+  
   _rxBufferTail = _rxBufferHead = 
   _txBufferTail = _txBufferHead = 0;
 }
@@ -127,8 +131,8 @@ void ParticleSoftSerial::prepareRX(void)
   pinMode(_rxPin, INPUT_PULLUP);
 
   _rxBitPos = PSS_INACTIVE;
-  rxTimer.begin(rxTimerISR, _usBitLength, uSec);
-  //rxTimer.interrupt_SIT(INT_DISABLE);
+  rxTimer.begin(rxTimerISR, _usBitLength, uSec, _rxTimId);
+  //rxTimer.interrupt_SIT(INT_DISABLE); // enabling/disabling SparkIntervalTimer adds too much latency at a time critical stage
 
   // prepare for FALLING edge of start bit 
   attachInterrupt(_rxPin, rxPinISR, FALLING);
@@ -140,8 +144,8 @@ void ParticleSoftSerial::prepareTX(void)
   pinSetFast(_txPin);
 
   _txBitPos = PSS_INACTIVE;
-  txTimer.begin(txTimerISR, _usBitLength, uSec);
-  //txTimer.interrupt_SIT(INT_DISABLE);
+  txTimer.begin(txTimerISR, _usBitLength, uSec, _txTimId);
+  //txTimer.interrupt_SIT(INT_DISABLE); // enabling/disabling SparkIntervalTimer adds too much latency at a time critical stage
 }
 
 void ParticleSoftSerial::begin(unsigned long baud)
@@ -323,9 +327,10 @@ void ParticleSoftSerial::rxPinISR(void)
     usLast[0] = micros();
     b[0] = HIGH;
 #endif
-    //rxTimer.interrupt_SIT(INT_ENABLE);
+    //rxTimer.interrupt_SIT(INT_ENABLE); // enabling/disabling SparkIntervalTimer adds too much latency at this time critical stage
     rxTimer.resetPeriod_SIT(_usStartBit, uSec);
     _rxBitPos = PSS_DATA;
+#warn "detachInterrupt() within an ISR has become disallowed - potential SOS+14 crash -> see https://github.com/particle-iot/device-os/issues/1835"        
     detachInterrupt(_rxPin);
   }
 }
@@ -372,7 +377,7 @@ void ParticleSoftSerial::rxTimerISR(void)
       _rxBufferHead = (_rxBufferHead + 1) % _PSS_BUFF_SIZE;
     }
     _rxBitPos = PSS_INACTIVE;
-    //rxTimer.interrupt_SIT(INT_DISABLE);
+    //rxTimer.interrupt_SIT(INT_DISABLE);  // enabling/disabling SparkIntervalTimer adds too much latency at this time critical stage
     attachInterrupt(_rxPin, rxPinISR, FALLING);
   }
   _PSS_DEBUG_LOW(_debugPin);
@@ -426,7 +431,7 @@ void ParticleSoftSerial::txTimerISR(void)
   if (_txBufferTail == _txBufferHead)                           // more data to send?
   {
     _txBitPos = PSS_INACTIVE;
-    //rxTimer.interrupt_SIT(INT_DISABLE);
+    //rxTimer.interrupt_SIT(INT_DISABLE); // enabling/disabling SparkIntervalTimer adds too much latency at this time critical stage
     if (_halfduplex && pss) pss->prepareRX();                   // when TX in finished revert back to default RX mode
   }
   else
