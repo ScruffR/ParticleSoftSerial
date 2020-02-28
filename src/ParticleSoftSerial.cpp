@@ -330,7 +330,7 @@ void ParticleSoftSerial::rxPinISR(void)
     //rxTimer.interrupt_SIT(INT_ENABLE); // enabling/disabling SparkIntervalTimer adds too much latency at this time critical stage
     rxTimer.resetPeriod_SIT(_usStartBit, uSec);
     _rxBitPos = PSS_DATA;
-#warn "detachInterrupt() within an ISR has become disallowed - potential SOS+14 crash -> see https://github.com/particle-iot/device-os/issues/1835"        
+#warning "detachInterrupt() within an ISR has become disallowed - potential SOS+14 crash -> see https://github.com/particle-iot/device-os/issues/1835"        
     detachInterrupt(_rxPin);
   }
 }
