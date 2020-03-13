@@ -86,7 +86,11 @@ volatile uint8_t ParticleSoftSerial::_txBufferTail =            0;
 volatile int8_t  ParticleSoftSerial::_txBitPos     = PSS_INACTIVE; 
 
 IntervalTimer ParticleSoftSerial::rxTimer;
+TIMid         ParticleSoftSerial::_rxTimId         = TIMER7;        // HW timer ID used for SparkIntervalTimer
+
 IntervalTimer ParticleSoftSerial::txTimer;
+TIMid         ParticleSoftSerial::_txTimId         = AUTO;          // HW timer ID used for SparkIntervalTimer
+
 
 ParticleSoftSerial* ParticleSoftSerial::pss = NULL;
 
